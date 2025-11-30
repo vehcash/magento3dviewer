@@ -10,8 +10,8 @@
     #colorSelectorOverlay
     {
       position: absolute;
-      top: 5vw; right: 5vw;
-      width: 8vw; height: 8vw;
+      top: 5vh; right: 5vh;
+      width: 8vh; height: 8vh;
       background: #333;
       display: flex; align-items: center; justify-content: center;
       pointer-events: auto;
@@ -23,17 +23,17 @@
     {
       color: #fff; font-family: sans-serif;
       position: absolute;
-      top: 5vw; right: 5vw;
+      top: 5vh; right: 5vh;
       display: none;
     }
 
     .colorSquare
     {
       color: #fff; font-family: sans-serif;
-      width: 6vw; height: 6vw;
+      width: 6vh; height: 6vh;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1vw;
+      font-size: 1vh;
     }
   </style>
 </head>
@@ -281,7 +281,7 @@
           const groups = Object.keys(colorList);
           const count = groups.length;
           const cols = Math.ceil(Math.sqrt(count));
-          grid.style.gridTemplateColumns = `repeat(${cols}, 6vw)`;
+          grid.style.gridTemplateColumns = `repeat(${cols}, 6vh)`;
 
           grid.innerHTML = '';
           groups.forEach(group => {
@@ -306,7 +306,7 @@
         const colors = colorList[group].List;
         const count = colors.length;
         const cols = Math.ceil(Math.sqrt(count));
-        grid.style.gridTemplateColumns = `repeat(${cols}, 6vw)`;
+        grid.style.gridTemplateColumns = `repeat(${cols}, 6vh)`;
 
         colors.forEach(entry => {
           const ral = Object.keys(entry)[0];
@@ -315,7 +315,7 @@
           const cell = document.createElement('div');
           cell.className = 'colorSquare';
           cell.style.background = hex;
-          cell.style.border = `0.2vw solid ffffff`;
+          cell.style.border = `0.2vh solid ffffff`;
           cell.style.color = `ffffff`;
           cell.textContent = ral;
 
