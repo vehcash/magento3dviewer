@@ -11,7 +11,7 @@
     {
       position: absolute;
       top: 5vh; right: 5vh;
-      width: 8vh; height: 8vh;
+      width: 12vh; height: 12vh;
       background: #333;
       display: flex; align-items: center; justify-content: center;
       pointer-events: auto;
@@ -30,10 +30,10 @@
     .colorSquare
     {
       color: #fff; font-family: sans-serif;
-      width: 6vh; height: 6vh;
+      width: 12vh; height: 12vh;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1vh;
+      font-size: 2vh;
     }
   </style>
 </head>
@@ -281,7 +281,7 @@
           const groups = Object.keys(colorList);
           const count = groups.length;
           const cols = Math.ceil(Math.sqrt(count));
-          grid.style.gridTemplateColumns = `repeat(${cols}, 6vh)`;
+          grid.style.gridTemplateColumns = `repeat(${cols}, 12vh)`;
 
           grid.innerHTML = '';
           groups.forEach(group => {
@@ -306,7 +306,7 @@
         const colors = colorList[group].List;
         const count = colors.length;
         const cols = Math.ceil(Math.sqrt(count));
-        grid.style.gridTemplateColumns = `repeat(${cols}, 6vh)`;
+        grid.style.gridTemplateColumns = `repeat(${cols}, 12vh)`;
 
         colors.forEach(entry => {
           const ral = Object.keys(entry)[0];
@@ -315,7 +315,7 @@
           const cell = document.createElement('div');
           cell.className = 'colorSquare';
           cell.style.background = hex;
-          cell.style.border = `0.2vh solid ffffff`;
+          cell.style.border = `0.5vh solid ffffff`;
           cell.style.color = `ffffff`;
           cell.textContent = ral;
 
