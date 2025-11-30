@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>GLB Object Viewer with OrbitControls</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #111; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    #colorSelectorOverlay
+    {
+      position: absolute;
+      top: 5vh; right: 5vh;
+      width: 12vh; height: 12vh;
+      background: #333;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: auto;
+      cursor: pointer;
+      color: #fff; font-family: sans-serif;
+    }
+
+    #colorGrid
+    {
+      color: #fff; font-family: sans-serif;
+      position: absolute;
+      top: 5vh; right: 5vh;
+      display: none;
+    }
+
+    .colorSquare
+    {
+      color: #fff; font-family: sans-serif;
+      width: 12vh; height: 12vh;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="colorSelectorOverlay">Color</div>
+  <div id="colorGrid"></div>
+
+<script async src="https://ga.jspm.io/npm:es-module-shims@1.5.17/dist/es-module-shims.js"></script>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "./build/three.module.js",
+      "three/addons/": "./jsm/"
+    }
+  }
+</script>
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+    import { PMREMGenerator } from 'three';
+
+    function createMagento3DViewer(options = {})
+    {
+      // Default gradient colors if none are provided
+      const {
+        topColorHex = 0x4A5A6A,     // medium grayish blue
+        bottomColorHex = 0x7B8D9A,  // lighter gray‑blue
+        modelPosition = new THREE.Vector3(-0.25,-1.0,0.0),
+        baseMaterinalName = "",
+        defaultColor = "RAL 9001",
+        colorList = {
+          "Whites": {
+            "List": [
+              {"RAL 9001": "#FDF4E3"},{"RAL 9002": "#E7EBDA"}
+            ],
+            "Color": "#FFFFFF"
+          },
+          "Blacks": {
+            "List": [
+              {"RAL 9022": "#9C9C9C"},{"RAL 9023": "#828282"}
+            ],
+            "Color": "#282828"
+          }
+        },
+        modelScale = 1.15,
+        modelUrl = "",
+        hdrUrl = ""
+      } = options;
+
+      // Renderer
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      document.body.appendChild(renderer.domElement);
+
+      // Scene
+      const scene = new THREE.Scene();
+
+      // Camera
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(2.5, 1.6, 3.5);
+
+      // Controls
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.enableZoom = true;
+      controls.enableRotate = true;
+      controls.enablePan = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 0.5;
+      controls.maxDistance = 6.0;
+      controls.target.set(0, 0.75, 0);
+
+      // Custom behavior: Shift+Left pans instead of rotates
+      renderer.domElement.addEventListener('mousedown', (event) => {
+        if (event.button === 0 && event.shiftKey) {
+          controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+        } else {
+          controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+        }
+      });
+
+      // Lighting
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      dirLight.position.set(3, 5, 2);
+      scene.add(dirLight);
+
+      // Gradient Sky Sphere
+      const geometry = new THREE.SphereGeometry(100, 32, 32);
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          topColor:   { value: new THREE.Color(topColorHex) },
+          bottomColor:{ value: new THREE.Color(bottomColorHex) }
+        },
+        vertexShader: `
+          varying vec3 vPos;
+          void main() {
+            vPos = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vPos;
+          uniform vec3 topColor;
+          uniform vec3 bottomColor;
+          void main() {
+            float mixRatio = (vPos.y + 50.0) / 100.0; // adjust for sphere size
+            gl_FragColor = vec4(mix(bottomColor, topColor, mixRatio), 1.0);
+          }
+        `,
+        side: THREE.BackSide
+      });
+      
+      const sky = new THREE.Mesh(geometry, material);
+      scene.add(sky);
+
+      // Loader
+      const loader = new GLTFLoader();
+      // Create Draco loader
+      const dracoLoader = new DRACOLoader();
+      // Set the path to Draco decoder files (from three.js examples)
+      dracoLoader.setDecoderPath('./jsm/libs/draco/');
+      // Set the draco loader
+      loader.setDRACOLoader(dracoLoader);
+
+      loader.load(modelUrl, (gltf) => {
+        const model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        model.position.set( modelPosition.x, modelPosition.y, modelPosition.z );
+        model.scale.set( modelScale, modelScale, modelScale );
+        scene.add(model);
+
+        // 👇 Apply default color immediately after model is added
+        if (defaultColor) {
+          applyColor(model, defaultColor, colorList);
+
+          // 🔑 Update overlay div with the default color and name
+          const overlay = document.getElementById("colorSelectorOverlay");
+          if (overlay) {
+            // Find hex value from colorList
+            let hexValue = null;
+            for (const group in colorList) {
+              colorList[group].List.forEach(entry => {
+                if (entry[defaultColor]) {
+                  hexValue = entry[defaultColor];
+                }
+              });
+            }
+            if (hexValue) {
+              overlay.style.background = hexValue;
+              overlay.textContent = defaultColor;
+            }
+          }
+        }
+
+        controls.update();
+      });
+
+      // PMREM generator
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      pmremGenerator.compileEquirectangularShader();
+
+      const hdr_loader = new HDRLoader();
+      hdr_loader.setDataType(THREE.FloatType)
+        .load(
+          hdrUrl,
+          (texture) => {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+            scene.environment = envMap;
+            texture.dispose();
+            pmremGenerator.dispose();
+          },
+          undefined,
+          (err) => {
+            console.error('Failed to load HDR:', err);
+          }
+        );
+
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      
+      animate();
+
+      // Resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+  
+      function applyColor(scene, ralCode, colorList)
+      {
+        // Find the hex value from the list
+        let hexValue = null;
+        for (const group in colorList) {
+          colorList[group].List.forEach(entry => {
+            if (entry[ralCode]) {
+              hexValue = entry[ralCode];
+            }
+          });
+        }
+
+        if (!hexValue) {
+          console.warn(`Color code ${ralCode} not found`);
+          return;
+        }
+
+        // Traverse scene and apply color
+        scene.traverse(child => {
+          if (child.isMesh && child.material) {
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.forEach(mat => {
+              if (mat.name === baseMaterinalName) {
+                mat.color.set(hexValue);
+              }
+            });
+          }
+        });
+      }
+
+      const overlay = document.getElementById('colorSelectorOverlay');
+      const grid = document.getElementById('colorGrid');
+      let state = 'main';
+      let selectedGroup = null;
+      let currentColor = "#333";
+
+      // Show groups as a grid of squares
+      overlay.addEventListener('click', () => {
+        if (state === 'main') {
+          overlay.style.display = 'none';
+          grid.style.display = 'grid';
+
+          const groups = Object.keys(colorList);
+          const count = groups.length;
+          const cols = Math.ceil(Math.sqrt(count));
+          grid.style.gridTemplateColumns = `repeat(${cols}, 12vh)`;
+
+          grid.innerHTML = '';
+          groups.forEach(group => {
+            const cell = document.createElement('div');
+            cell.className = 'colorSquare';
+            cell.textContent = group;
+            cell.style.background = colorList[group].Color; // representative color
+            cell.onclick = () => {
+              selectedGroup = group;
+              showColors(group);
+            };
+            grid.appendChild(cell);
+          });
+
+          state = 'groups';
+        }
+      });
+
+      // Show colors for a group
+      function showColors(group) {
+        grid.innerHTML = '';
+        const colors = colorList[group].List;
+        const count = colors.length;
+        const cols = Math.ceil(Math.sqrt(count));
+        grid.style.gridTemplateColumns = `repeat(${cols}, 12vh)`;
+
+        colors.forEach(entry => {
+          const ral = Object.keys(entry)[0];
+          const hex = entry[ral];
+
+          const cell = document.createElement('div');
+          cell.className = 'colorSquare';
+          cell.style.background = hex;
+          cell.style.border = `0.5vh solid ffffff`;
+          cell.style.color = `ffffff`;
+          cell.textContent = ral;
+
+          cell.onclick = () => {
+            viewer.applyColor(viewer.scene, ral, colorList); // 🔑 apply the color
+            overlay.style.background = hex;
+            overlay.textContent = ral;
+            grid.style.display = 'none';
+            overlay.style.display = 'flex';
+            state = 'main';
+          };
+
+          grid.appendChild(cell);
+        });
+
+        state = 'colors';
+      }
+
+      // Collapse grid when clicking canvas
+      renderer.domElement.addEventListener('click', () => {
+        if (grid.style.display === 'grid') {
+          grid.style.display = 'none';
+          overlay.style.display = 'flex';
+          state = 'main';
+        }
+      });
+
+      // Return a viewer object with everything you need
+      return {
+        scene,
+        renderer,
+        camera,
+        controls,
+        params: options,
+        applyColor
+      };
+    }
+
+    var viewer = createMagento3DViewer({
+      modelUrl: './test_incineradoras/PET-200_optimizado_v2.glb',
+      hdrUrl: './test_incineradoras/blue_photo_studio_4k.hdr',
+      baseMaterinalName: "METAL_FINAL",
+      defaultColor: "RAL 6016",
+      colorList: {
+        "Amarillos": {
+          "List": [
+            {"RAL 1000": "#BEBD7F"},{"RAL 1001": "#C2B078"},{"RAL 1002": "#C6A664"},{"RAL 1003": "#E5BE01"},
+            {"RAL 1004": "#CDA434"},{"RAL 1005": "#A98307"},{"RAL 1006": "#E4A010"},{"RAL 1007": "#DC9D00"},
+            {"RAL 1011": "#8A6642"},{"RAL 1012": "#C7B446"},{"RAL 1013": "#EAE6CA"},{"RAL 1014": "#E1CC4F"},
+            {"RAL 1015": "#E6D690"},{"RAL 1016": "#EDFF21"},{"RAL 1017": "#F5D033"},{"RAL 1018": "#F8F32B"},
+            {"RAL 1019": "#9E9764"},{"RAL 1020": "#999950"},{"RAL 1021": "#F3DA0B"},{"RAL 1023": "#FAD201"},
+            {"RAL 1024": "#AEA04B"},{"RAL 1026": "#FFFF00"},{"RAL 1027": "#9D9101"},{"RAL 1028": "#F4A900"},
+            {"RAL 1032": "#D6AE01"},{"RAL 1033": "#F3A505"},{"RAL 1034": "#EFA94A"},{"RAL 1035": "#6A5D4D"},
+            {"RAL 1036": "#705335"},{"RAL 1037": "#F39F18"}
+          ],
+          "Color": "#E5BE01"
+        },
+        "Naranjas": {
+          "List": [
+            {"RAL 2000": "#ED760E"},{"RAL 2001": "#C93C20"},{"RAL 2002": "#CB2821"},{"RAL 2003": "#FF7514"},
+            {"RAL 2004": "#F44611"},{"RAL 2005": "#FF2301"},{"RAL 2007": "#FFA420"},{"RAL 2008": "#F75E25"},
+            {"RAL 2009": "#F54021"},{"RAL 2010": "#D84B20"},{"RAL 2011": "#EC7C26"},{"RAL 2012": "#E55137"},
+            {"RAL 2013": "#C35831"}
+          ],
+          "Color": "#ED760E"
+        },
+        "Rojos": {
+          "List": [
+            {"RAL 3000": "#AF2B1E"},{"RAL 3001": "#A52019"},{"RAL 3002": "#A2231D"},{"RAL 3003": "#9B111E"},
+            {"RAL 3004": "#75151E"},{"RAL 3005": "#5E2129"},{"RAL 3007": "#3E1F1F"},{"RAL 3009": "#642424"},
+            {"RAL 3011": "#781F19"},{"RAL 3012": "#C1876B"},{"RAL 3013": "#A12312"},{"RAL 3014": "#D36E70"},
+            {"RAL 3015": "#EA899A"},{"RAL 3016": "#B32821"},{"RAL 3017": "#E63244"},{"RAL 3018": "#D53032"},
+            {"RAL 3020": "#CC0605"},{"RAL 3022": "#D95030"},{"RAL 3027": "#A72920"},{"RAL 3028": "#F80000"},
+            {"RAL 3031": "#AC3232"}
+          ],
+          "Color": "#AF2B1E"
+        },
+        "Violetas": {
+          "List": [
+            {"RAL 4001": "#6D3F5B"},{"RAL 4002": "#922B3E"},{"RAL 4003": "#DE4C8A"},{"RAL 4004": "#641C34"},
+            {"RAL 4005": "#6C4675"},{"RAL 4006": "#A03472"},{"RAL 4007": "#4A192C"},{"RAL 4008": "#924E7D"},
+            {"RAL 4009": "#A18594"},{"RAL 4010": "#CF3476"}
+          ],
+          "Color": "#922B3E"
+        },
+        "Azules": {
+          "List": [
+            {"RAL 5000": "#354D73"},{"RAL 5001": "#1F3438"},{"RAL 5002": "#20214F"},{"RAL 5003": "#1D1E33"},
+            {"RAL 5004": "#18171C"},{"RAL 5005": "#1E2460"},{"RAL 5007": "#3E5F8A"},{"RAL 5008": "#26252D"},
+            {"RAL 5009": "#025669"},{"RAL 5010": "#0E294B"},{"RAL 5011": "#231A24"},{"RAL 5012": "#3B83BD"},
+            {"RAL 5013": "#1E213D"},{"RAL 5014": "#606E8C"},{"RAL 5015": "#2271B3"},{"RAL 5017": "#063971"},
+            {"RAL 5018": "#3F888F"},{"RAL 5019": "#1B5583"},{"RAL 5020": "#1D334A"},{"RAL 5021": "#256D7B"},
+            {"RAL 5022": "#252850"},{"RAL 5023": "#49678D"},{"RAL 5024": "#5D9B9B"}
+          ],
+          "Color": "#2271B3"
+        },
+        "Verdes": {
+          "List": [
+            {"RAL 6000": "#327662"},{"RAL 6001": "#287233"},{"RAL 6002": "#2D572C"},{"RAL 6003": "#475841"},
+            {"RAL 6004": "#1A2421"},{"RAL 6005": "#2F4538"},{"RAL 6006": "#3E3B32"},{"RAL 6007": "#343B29"},
+            {"RAL 6008": "#39352A"},{"RAL 6009": "#31372B"},{"RAL 6010": "#35682D"},{"RAL 6011": "#587246"},
+            {"RAL 6012": "#343E40"},{"RAL 6013": "#6C7156"},{"RAL 6014": "#47402E"},{"RAL 6015": "#3B3C36"},
+            {"RAL 6016": "#1E5945"},{"RAL 6017": "#4C9141"},{"RAL 6018": "#57A639"},{"RAL 6019": "#BDECB6"},
+            {"RAL 6020": "#2E3A23"},{"RAL 6021": "#89AC76"},{"RAL 6022": "#25221B"},{"RAL 6024": "#308446"},
+            {"RAL 6025": "#3D642D"},{"RAL 6026": "#015D52"},{"RAL 6027": "#84C3BE"},{"RAL 6028": "#2C5545"},
+            {"RAL 6029": "#20603D"},{"RAL 6032": "#317F43"},{"RAL 6033": "#497E76"},{"RAL 6034": "#7FB5B5"},
+            {"RAL 6035": "#1C542D"},{"RAL 6036": "#193737"},{"RAL 6037": "#008F39"},{"RAL 6038": "#00BB2D"}
+          ],
+          "Color": "#287233"
+        },
+        "Grises": {
+          "List": [
+            {"RAL 7000": "#78858B"},{"RAL 7001": "#8A9597"},{"RAL 7002": "#7E7B52"},{"RAL 7003": "#6C7059"},
+            {"RAL 7004": "#969992"},{"RAL 7005": "#646B63"},{"RAL 7006": "#6D6552"},{"RAL 7008": "#6A5F31"},
+            {"RAL 7009": "#4D5645"},{"RAL 7010": "#4C514A"},{"RAL 7011": "#434B4D"},{"RAL 7012": "#4E5754"},
+            {"RAL 7013": "#47402E"},{"RAL 7015": "#434750"},{"RAL 7016": "#293133"},{"RAL 7021": "#23282B"},
+            {"RAL 7022": "#332F2C"},{"RAL 7023": "#686C5E"},{"RAL 7024": "#474A51"},{"RAL 7026": "#3B3C36"},
+            {"RAL 7030": "#939388"},{"RAL 7031": "#5D6970"},{"RAL 7032": "#B5B8B1"},{"RAL 7033": "#818479"},
+            {"RAL 7034": "#939176"},{"RAL 7035": "#D7D7D7"},{"RAL 7036": "#9CA0A0"},{"RAL 7037": "#7D7F7D"},
+            {"RAL 7038": "#B5B8B1"},{"RAL 7039": "#6C6E6B"},{"RAL 7040": "#9DA1AA"},{"RAL 7042": "#8D948D"},
+            {"RAL 7043": "#4E5452"},{"RAL 7044": "#CAC4B0"},{"RAL 7045": "#8D948D"},{"RAL 7046": "#909090"},
+            {"RAL 7047": "#EDE6E3"}
+          ],
+          "Color": "#7D7F7D"
+        },
+        "Marrones": {
+          "List": [
+            {"RAL 8000": "#7C4C32"},{"RAL 8001": "#9C6B30"},{"RAL 8002": "#6E3B3B"},{"RAL 8003": "#734222"},
+            {"RAL 8004": "#8E402A"},{"RAL 8007": "#64382B"},{"RAL 8008": "#5E3A21"},{"RAL 8011": "#5B3A29"},
+            {"RAL 8012": "#592321"},{"RAL 8014": "#382C1E"},{"RAL 8015": "#633A34"},{"RAL 8016": "#4C2F27"},
+            {"RAL 8017": "#45322E"},{"RAL 8019": "#403A3A"},{"RAL 8022": "#212121"},{"RAL 8023": "#A65E2E"},
+            {"RAL 8024": "#79553D"},{"RAL 8025": "#755C48"},{"RAL 8028": "#4E3B31"},{"RAL 8029": "#763C28"}
+          ],
+          "Color": "#7C4C32"
+        },
+        "Blancos": {
+          "List": [
+            {"RAL 9001": "#FDF4E3"},{"RAL 9002": "#E7EBDA"},{"RAL 9003": "#F4F4F4"},{"RAL 9004": "#282828"},
+            {"RAL 9005": "#0A0A0A"},{"RAL 9010": "#FFFFFF"},{"RAL 9011": "#1C1C1C"},{"RAL 9016": "#F6F6F6"},
+            {"RAL 9017": "#1E1E1E"},{"RAL 9018": "#D7D7D7"}
+          ],
+          "Color": "#FFFFFF"
+        },
+        "Negros": {
+          "List": [
+            {"RAL 9022": "#9C9C9C"},{"RAL 9023": "#828282"}
+          ],
+          "Color": "#282828"
+        }
+      }
+    });
+  </script>
+</body>
+</html>
