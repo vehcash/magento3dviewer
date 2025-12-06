@@ -83,8 +83,7 @@
         },
         modelScale = 1.15,
         modelUrl = "",
-        envPngUrl = "",
-        hdrUrl = ""
+        envPngUrl = ""
       } = options;
 
       function isSafariIOS() 
@@ -231,40 +230,18 @@
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
 
-      if (isSafariIOS())
-      {
-        // ✅ Safari/iOS → use lightweight PNG
-        const texture_loader = new THREE.TextureLoader().load(
-          options.envPngUrl, // path to your PNG
-          (texture) => {
-            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-            scene.environment = envMap;
-            scene.background = envMap; // optional: show PNG as background
-            texture.dispose();
-            pmremGenerator.dispose();
-          },
-          undefined,
-          (err) => console.warn('PNG env failed:', err)
-        );
-      }
-      else
-      {
-        const hdr_loader = new HDRLoader();
-          hdr_loader.setDataType(THREE.FloatType)
-            .load(
-              hdrUrl,
-              (texture) => {
-                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                scene.environment = envMap;
-                texture.dispose();
-                pmremGenerator.dispose();
-              },
-              undefined,
-              (err) => {
-                console.error('Failed to load HDR:', err);
-              }
-            );
-      }
+      const texture_loader = new THREE.TextureLoader().load(
+        options.envPngUrl, // path to your PNG
+        (texture) => {
+          const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+          scene.environment = envMap;
+          scene.background = envMap; // optional: show PNG as background
+          texture.dispose();
+          pmremGenerator.dispose();
+        },
+        undefined,
+        (err) => console.warn('PNG env failed:', err)
+      );
      
       // Animation loop
       function animate() {
@@ -402,8 +379,7 @@
 
     var viewer = createMagento3DViewer({
       modelUrl: './test_incineradoras/PET-200_optimizado_v3.glb',
-      envPngUrl: './test_incineradoras/blue_photo_studio_4k.png',
-      hdrUrl: './test_incineradoras/blue_photo_studio_4k.hdr',
+      envPngUrl: './test_incineradoras/blue_photo_studio_2k.png',
       baseMaterinalName: "METAL_FINAL",
       defaultColor: "RAL 6016",
       colorList: {
