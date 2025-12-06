@@ -55,7 +55,6 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
     import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
     import { PMREMGenerator } from 'three';
 
@@ -231,26 +230,7 @@
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
 
-      if (isSafariIOS())
-      {
-        const rgbe_loader = new RGBELoader()
-          .setDataType(THREE.FloatType) // or UnsignedByteType depending on your pipeline
-          .load(
-            hdrUrl,
-            (texture) => {
-              const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-              scene.environment = envMap;
-              scene.background = envMap; // optional, if you want the HDR as background
-              texture.dispose();
-              pmremGenerator.dispose();
-            },
-            undefined, // onProgress
-            (err) => {
-              console.error('Failed to load HDR:', err);
-            }
-          );
-      }
-      else
+      if (! isSafariIOS())
       {
         const hdr_loader = new HDRLoader();
           hdr_loader.setDataType(THREE.FloatType)
