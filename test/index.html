@@ -204,6 +204,7 @@
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
 
+      /*
       const hdr_loader = new HDRLoader();
       hdr_loader.setDataType(THREE.FloatType)
         .load(
@@ -219,6 +220,7 @@
             console.error('Failed to load HDR:', err);
           }
         );
+*/
 
       // Animation loop
       function animate() {
