@@ -83,6 +83,7 @@
         },
         modelScale = 1.15,
         modelUrl = "",
+        envPngUrl = "",
         hdrUrl = ""
       } = options;
 
@@ -230,7 +231,23 @@
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
 
-      if (! isSafariIOS())
+      if (isSafariIOS())
+      {
+        // ✅ Safari/iOS → use lightweight PNG
+        const texture_loader = new THREE.TextureLoader().load(
+          options.envPngUrl, // path to your PNG
+          (texture) => {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+            scene.environment = envMap;
+            scene.background = envMap; // optional: show PNG as background
+            texture.dispose();
+            pmremGenerator.dispose();
+          },
+          undefined,
+          (err) => console.warn('PNG env failed:', err)
+        );
+      }
+      else
       {
         const hdr_loader = new HDRLoader();
           hdr_loader.setDataType(THREE.FloatType)
@@ -385,6 +402,7 @@
 
     var viewer = createMagento3DViewer({
       modelUrl: './test_incineradoras/Modelo SB-AB-optimizado.glb',
+      envPngUrl: './test_incineradoras/blue_photo_studio_4k.png',
       hdrUrl: './test_incineradoras/blue_photo_studio_4k.hdr',
       baseMaterinalName: "hammer_paint_03.004",
       defaultColor: "RAL 6016",
