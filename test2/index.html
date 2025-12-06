@@ -86,10 +86,36 @@
         hdrUrl = ""
       } = options;
 
+      function isSafariIOS() 
+      {
+        const ua = navigator.userAgent;
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || 
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+        return isIOS && isSafari;
+      }
+
       // Renderer
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      let renderer;
+
+      if (isSafariIOS())
+      {
+        // Safari/iOS: conservative settings
+        renderer = new THREE.WebGLRenderer({
+          antialias: false,
+          alpha: true,
+          powerPreference: 'low-power'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      } 
+      else 
+      {
+        // Default (desktop/other browsers)
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+      }
+
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       document.body.appendChild(renderer.domElement);
 
       // Scene
@@ -204,23 +230,28 @@
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
 
-      /*
-      const hdr_loader = new HDRLoader();
-      hdr_loader.setDataType(THREE.FloatType)
-        .load(
-          hdrUrl,
-          (texture) => {
-            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-            scene.environment = envMap;
-            texture.dispose();
-            pmremGenerator.dispose();
-          },
-          undefined,
-          (err) => {
-            console.error('Failed to load HDR:', err);
-          }
-        );
-      */
+      if (isSafariIOS())
+      {
+
+      }
+      else
+      {
+        const hdr_loader = new HDRLoader();
+          hdr_loader.setDataType(THREE.FloatType)
+            .load(
+              hdrUrl,
+              (texture) => {
+                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                scene.environment = envMap;
+                texture.dispose();
+                pmremGenerator.dispose();
+              },
+              undefined,
+              (err) => {
+                console.error('Failed to load HDR:', err);
+              }
+            );
+      }
      
       // Animation loop
       function animate() {
