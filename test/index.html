@@ -10,30 +10,36 @@
     #colorSelectorOverlay
     {
       position: absolute;
-      top: 5vh; right: 5vh;
-      width: 12vh; height: 12vh;
-      background: #333;
+      top: 2.5vh; right: 2.5vh;
+      width: 7vh; height: 7vh;
+      color: black; /* base color */
+      background-color: white;
       display: flex; align-items: center; justify-content: center;
       pointer-events: auto;
       cursor: pointer;
-      color: #fff; font-family: sans-serif;
+      font-family: sans-serif;
+      border-radius: 50%;
+      font-size: 1.5vh;
     }
 
     #colorGrid
     {
-      color: #fff; font-family: sans-serif;
+      font-family: sans-serif;
       position: absolute;
-      top: 5vh; right: 5vh;
+      top: 2.5vh; right: 2.5vh;
+      border-radius: 50%;
       display: none;
+      font-size: 1.5vh;
     }
 
     .colorSquare
     {
-      color: #fff; font-family: sans-serif;
-      width: 12vh; height: 12vh;
+      font-family: sans-serif;
+      width: 7vh; height: 7vh;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 2vh;
+      border-radius: 50%;
+      font-size: 1.5vh;
     }
   </style>
 </head>
@@ -289,6 +295,23 @@
         });
       }
 
+      function getReadableTextColor(hex) {
+        // Remove '#' if present
+        hex = hex.replace('#', '');
+
+        // Parse RGB values
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+
+        // Calculate relative luminance (per ITU-R BT.709)
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+        // If luminance is low → background is dark → use white text
+        // Otherwise → background is light → use black text
+        return luminance < 0.5 ? "#FFFFFF" : "#000000";
+      }
+
       const overlay = document.getElementById('colorSelectorOverlay');
       const grid = document.getElementById('colorGrid');
       let state = 'main';
@@ -304,14 +327,16 @@
           const groups = Object.keys(colorList);
           const count = groups.length;
           const cols = Math.ceil(Math.sqrt(count));
-          grid.style.gridTemplateColumns = `repeat(${cols}, 12vh)`;
+          grid.style.gridTemplateColumns = `repeat(${cols}, 7vh)`;
 
           grid.innerHTML = '';
           groups.forEach(group => {
             const cell = document.createElement('div');
             cell.className = 'colorSquare';
             cell.textContent = group;
-            cell.style.background = colorList[group].Color; // representative color
+            const bg = colorList[group].Color;   // background from your list
+            cell.style.background = bg;          // set background
+            cell.style.color = getReadableTextColor(bg); // set text color to complementary
             cell.onclick = () => {
               selectedGroup = group;
               showColors(group);
@@ -329,7 +354,7 @@
         const colors = colorList[group].List;
         const count = colors.length;
         const cols = Math.ceil(Math.sqrt(count));
-        grid.style.gridTemplateColumns = `repeat(${cols}, 12vh)`;
+        grid.style.gridTemplateColumns = `repeat(${cols}, 7vh)`;
 
         colors.forEach(entry => {
           const ral = Object.keys(entry)[0];
@@ -338,8 +363,7 @@
           const cell = document.createElement('div');
           cell.className = 'colorSquare';
           cell.style.background = hex;
-          cell.style.border = `0.5vh solid ffffff`;
-          cell.style.color = `ffffff`;
+          cell.style.color = getReadableTextColor(hex);
           cell.textContent = ral;
 
           cell.onclick = () => {
@@ -394,7 +418,7 @@
             {"RAL 1032": "#D6AE01"},{"RAL 1033": "#F3A505"},{"RAL 1034": "#EFA94A"},{"RAL 1035": "#6A5D4D"},
             {"RAL 1036": "#705335"},{"RAL 1037": "#F39F18"}
           ],
-          "Color": "#E5BE01"
+          "Color": "#d7b327"
         },
         "Naranjas": {
           "List": [
