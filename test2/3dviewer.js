@@ -98,6 +98,26 @@ export function createMagento3DViewer(options = {})
     dirLight.position.set(3, 5, 2);
     scene.add(dirLight);
 
+    // --- Auto orbit parameters ---
+    const cycleDuration = 30000; // 30s per full revolution
+    const idleDelay = 60000;     // 1 min idle before auto orbit resumes
+    const lookAtHeight = 1;
+    const radius = 5;
+    const height = 1.5;
+
+    let autoOrbit = true;
+    let lastInteraction = performance.now();
+    let startTime = performance.now();
+
+    // --- Interaction listener ---
+    ["mousedown","touchstart","wheel"].forEach(evt => {
+    renderer.domElement.addEventListener(evt, () => {
+        autoOrbit = false;
+        controls.enabled = true;
+        lastInteraction = performance.now();
+    });
+    });
+
     // Gradient Sky Sphere
     const geometry = new THREE.SphereGeometry(100, 32, 32);
     const material = new THREE.ShaderMaterial({
@@ -191,7 +211,32 @@ export function createMagento3DViewer(options = {})
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
-        controls.update();
+
+        const now = performance.now();
+
+        // If user has been idle for > idleDelay, resume auto orbit
+        if (!autoOrbit && now - lastInteraction > idleDelay) {
+            autoOrbit = true;
+            controls.enabled = false;
+            // Reset startTime so interpolation continues smoothly
+            startTime = now;
+        }
+
+        if (autoOrbit) {
+            const elapsed = (now - startTime) % cycleDuration;
+            const t = elapsed / cycleDuration; // 0..1
+            const angle = t * Math.PI * 2;
+
+            camera.position.set(
+                Math.cos(angle) * radius,
+                height,
+                Math.sin(angle) * radius
+            );
+            camera.lookAt(0,lookAtHeight,0);
+        } else {
+            controls.update();
+        }
+
         renderer.render(scene, camera);
     }
 
