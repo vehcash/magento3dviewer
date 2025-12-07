@@ -156,6 +156,8 @@ export function createMagento3DViewer(options = {})
     // Set the draco loader
     loader.setDRACOLoader(dracoLoader);
 
+    let mixer; // AnimationMixer
+
     loader.load(modelUrl, (gltf) => {
         const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
@@ -164,6 +166,16 @@ export function createMagento3DViewer(options = {})
         model.position.set( modelPosition.x, modelPosition.y, modelPosition.z );
         model.scale.set( modelScale, modelScale, modelScale );
         scene.add(model);
+
+        // Create mixer for the whole scene
+        mixer = new THREE.AnimationMixer(model);
+
+        // Play the first animation clip (global one)
+        const clip = gltf.animations[0];
+        if (clip) {
+            const action = mixer.clipAction(clip);
+            action.play();
+        }
 
         // 👇 Apply default color immediately after model is added
         if (defaultColor) {
@@ -208,6 +220,8 @@ export function createMagento3DViewer(options = {})
         (err) => console.warn('PNG env failed:', err)
     );
 
+    const clock = new THREE.Clock();
+
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
@@ -236,6 +250,9 @@ export function createMagento3DViewer(options = {})
         } else {
             controls.update();
         }
+
+        const delta = clock.getDelta();
+        if (mixer) mixer.update(delta);
 
         renderer.render(scene, camera);
     }
