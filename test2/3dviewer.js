@@ -33,31 +33,31 @@ export function createMagento3DViewer(options = {})
 
     function isSafariIOS() 
     {
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || 
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-    return isIOS && isSafari;
+        const ua = navigator.userAgent;
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || 
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+        return isIOS && isSafari;
     }
 
-    // Renderer
     let renderer;
+    let viewer;
 
     if (isSafariIOS())
     {
-    // Safari/iOS: conservative settings
-    renderer = new THREE.WebGLRenderer({
-        antialias: false,
-        alpha: true,
-        powerPreference: 'low-power'
-    });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // Safari/iOS: conservative settings
+        renderer = new THREE.WebGLRenderer({
+            antialias: false,
+            alpha: true,
+            powerPreference: 'low-power'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     } 
     else 
     {
-    // Default (desktop/other browsers)
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+        // Default (desktop/other browsers)
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
     }
 
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -83,11 +83,11 @@ export function createMagento3DViewer(options = {})
 
     // Custom behavior: Shift+Left pans instead of rotates
     renderer.domElement.addEventListener('mousedown', (event) => {
-    if (event.button === 0 && event.shiftKey) {
-        controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
-    } else {
-        controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-    }
+        if (event.button === 0 && event.shiftKey) {
+            controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+        } else {
+            controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+        }
     });
 
     // Lighting
@@ -101,27 +101,27 @@ export function createMagento3DViewer(options = {})
     // Gradient Sky Sphere
     const geometry = new THREE.SphereGeometry(100, 32, 32);
     const material = new THREE.ShaderMaterial({
-    uniforms: {
-        topColor:   { value: new THREE.Color(topColorHex) },
-        bottomColor:{ value: new THREE.Color(bottomColorHex) }
-    },
-    vertexShader: `
-        varying vec3 vPos;
-        void main() {
-        vPos = position;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-        }
-    `,
-    fragmentShader: `
-        varying vec3 vPos;
-        uniform vec3 topColor;
-        uniform vec3 bottomColor;
-        void main() {
-        float mixRatio = (vPos.y + 50.0) / 100.0; // adjust for sphere size
-        gl_FragColor = vec4(mix(bottomColor, topColor, mixRatio), 1.0);
-        }
-    `,
-    side: THREE.BackSide
+        uniforms: {
+            topColor:   { value: new THREE.Color(topColorHex) },
+            bottomColor:{ value: new THREE.Color(bottomColorHex) }
+        },
+        vertexShader: `
+            varying vec3 vPos;
+            void main() {
+            vPos = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+            }
+        `,
+        fragmentShader: `
+            varying vec3 vPos;
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            void main() {
+            float mixRatio = (vPos.y + 50.0) / 100.0; // adjust for sphere size
+            gl_FragColor = vec4(mix(bottomColor, topColor, mixRatio), 1.0);
+            }
+        `,
+        side: THREE.BackSide
     });
     
     const sky = new THREE.Mesh(geometry, material);
@@ -137,38 +137,38 @@ export function createMagento3DViewer(options = {})
     loader.setDRACOLoader(dracoLoader);
 
     loader.load(modelUrl, (gltf) => {
-    const model = gltf.scene;
-    const box = new THREE.Box3().setFromObject(model);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    model.position.set( modelPosition.x, modelPosition.y, modelPosition.z );
-    model.scale.set( modelScale, modelScale, modelScale );
-    scene.add(model);
+        const model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        model.position.set( modelPosition.x, modelPosition.y, modelPosition.z );
+        model.scale.set( modelScale, modelScale, modelScale );
+        scene.add(model);
 
-    // 👇 Apply default color immediately after model is added
-    if (defaultColor) {
-        applyColor(model, defaultColor, colorList);
+        // 👇 Apply default color immediately after model is added
+        if (defaultColor) {
+            applyColor(model, defaultColor, colorList);
 
-        // 🔑 Update overlay div with the default color and name
-        const overlay = document.getElementById("colorSelectorOverlay");
-        if (overlay) {
-        // Find hex value from colorList
-        let hexValue = null;
-        for (const group in colorList) {
-            colorList[group].List.forEach(entry => {
-            if (entry[defaultColor]) {
-                hexValue = entry[defaultColor];
+            // 🔑 Update overlay div with the default color and name
+            const overlay = document.getElementById("colorSelectorOverlay");
+            if (overlay) {
+                // Find hex value from colorList
+                let hexValue = null;
+                for (const group in colorList) {
+                    colorList[group].List.forEach(entry => {
+                    if (entry[defaultColor]) {
+                        hexValue = entry[defaultColor];
+                    }
+                    });
+                }
+                if (hexValue) {
+                    overlay.style.background = hexValue;
+                    overlay.textContent = defaultColor;
+                }
             }
-            });
         }
-        if (hexValue) {
-            overlay.style.background = hexValue;
-            overlay.textContent = defaultColor;
-        }
-        }
-    }
 
-    controls.update();
+        controls.update();
     });
 
     // PMREM generator
@@ -176,166 +176,167 @@ export function createMagento3DViewer(options = {})
     pmremGenerator.compileEquirectangularShader();
 
     const texture_loader = new THREE.TextureLoader().load(
-    options.envPngUrl, // path to your PNG
-    (texture) => {
-        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-        scene.environment = envMap;
-        scene.background = envMap; // optional: show PNG as background
-        texture.dispose();
-        pmremGenerator.dispose();
-    },
-    undefined,
-    (err) => console.warn('PNG env failed:', err)
+        options.envPngUrl, // path to your PNG
+        (texture) => {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+            scene.environment = envMap;
+            scene.background = envMap; // optional: show PNG as background
+            texture.dispose();
+            pmremGenerator.dispose();
+        },
+        undefined,
+        (err) => console.warn('PNG env failed:', err)
     );
 
     // Animation loop
     function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
     }
-    
+
     animate();
 
     // Resize
     window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
     function applyColor(scene, ralCode, colorList)
     {
-    // Find the hex value from the list
-    let hexValue = null;
-    for (const group in colorList) {
-        colorList[group].List.forEach(entry => {
-        if (entry[ralCode]) {
-            hexValue = entry[ralCode];
+        // Find the hex value from the list
+        let hexValue = null;
+        for (const group in colorList) {
+            colorList[group].List.forEach(entry => {
+            if (entry[ralCode]) {
+                hexValue = entry[ralCode];
+            }
+            });
         }
-        });
-    }
 
-    if (!hexValue) {
-        console.warn(`Color code ${ralCode} not found`);
-        return;
-    }
+        if (!hexValue) {
+            console.warn(`Color code ${ralCode} not found`);
+            return;
+        }
 
-    // Traverse scene and apply color
-    scene.traverse(child => {
-        if (child.isMesh && child.material) {
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
-        materials.forEach(mat => {
-            if (mat.name === baseMaterinalName) {
-            mat.color.set(hexValue);
+        // Traverse scene and apply color
+        scene.traverse(child => {
+            if (child.isMesh && child.material) {
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                materials.forEach(mat => {
+                    if (mat.name === baseMaterinalName) {
+                    mat.color.set(hexValue);
+                    }
+                });
             }
         });
-        }
-    });
     }
 
     function getReadableTextColor(hex) {
-    // Remove '#' if present
-    hex = hex.replace('#', '');
+        // Remove '#' if present
+        hex = hex.replace('#', '');
 
-    // Parse RGB values
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
+        // Parse RGB values
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
 
-    // Calculate relative luminance (per ITU-R BT.709)
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        // Calculate relative luminance (per ITU-R BT.709)
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-    // If luminance is low → background is dark → use white text
-    // Otherwise → background is light → use black text
-    return luminance < 0.5 ? "#FFFFFF" : "#000000";
+        // If luminance is low → background is dark → use white text
+        // Otherwise → background is light → use black text
+        return luminance < 0.5 ? "#FFFFFF" : "#000000";
     }
 
     const overlay = document.getElementById('colorSelectorOverlay');
     const grid = document.getElementById('colorGrid');
     let state = 'main';
     let selectedGroup = null;
-    let currentColor = "#333";
 
     // Show groups as a grid of squares
     overlay.addEventListener('click', () => {
-    if (state === 'main') {
-        overlay.style.display = 'none';
-        grid.style.display = 'grid';
+        if (state === 'main') {
+            overlay.style.display = 'none';
+            grid.style.display = 'grid';
 
-        const groups = Object.keys(colorList);
-        const count = groups.length;
-        const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
-        grid.style.gridTemplateColumns = `repeat(${cols}, 7vh)`;
+            const groups = Object.keys(colorList);
+            const count = groups.length;
+            const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
+            grid.style.gridTemplateColumns = `repeat(${cols}, max(7vh,7vw))`;
 
-        grid.innerHTML = '';
-        groups.forEach(group => {
-        const cell = document.createElement('div');
-        cell.className = 'colorSquare';
-        cell.textContent = group;
-        const bg = colorList[group].Color;   // background from your list
-        cell.style.background = bg;          // set background
-        cell.style.color = getReadableTextColor(bg); // set text color to complementary
-        cell.onclick = () => {
-            selectedGroup = group;
-            showColors(group);
-        };
-        grid.appendChild(cell);
-        });
+            grid.innerHTML = '';
+            groups.forEach(group => {
+            const cell = document.createElement('div');
+            cell.className = 'colorSquare';
+            cell.textContent = group;
+            const bg = colorList[group].Color;   // background from your list
+            cell.style.background = bg;          // set background
+            cell.style.color = getReadableTextColor(bg); // set text color to complementary
+            cell.onclick = () => {
+                selectedGroup = group;
+                showColors(group);
+            };
+            grid.appendChild(cell);
+            });
 
-        state = 'groups';
-    }
+            state = 'groups';
+        }
     });
 
     // Show colors for a group
     function showColors(group) {
-    grid.innerHTML = '';
-    const colors = colorList[group].List;
-    const count = colors.length;
-    const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
-    grid.style.gridTemplateColumns = `repeat(${cols}, 7vh)`;
+        grid.innerHTML = '';
+        const colors = colorList[group].List;
+        const count = colors.length;
+        const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
+        grid.style.gridTemplateColumns = `repeat(${cols}, max(7vh,7vw))`;
 
-    colors.forEach(entry => {
-        const ral = Object.keys(entry)[0];
-        const hex = entry[ral];
+        colors.forEach(entry => {
+            const ral = Object.keys(entry)[0];
+            const hex = entry[ral];
 
-        const cell = document.createElement('div');
-        cell.className = 'colorSquare';
-        cell.style.background = hex;
-        cell.style.color = getReadableTextColor(hex);
-        cell.textContent = ral;
+            const cell = document.createElement('div');
+            cell.className = 'colorSquare';
+            cell.style.background = hex;
+            cell.style.color = getReadableTextColor(hex);
+            cell.textContent = ral;
 
-        cell.onclick = () => {
-        viewer.applyColor(viewer.scene, ral, colorList); // 🔑 apply the color
-        overlay.style.background = hex;
-        overlay.textContent = ral;
-        grid.style.display = 'none';
-        overlay.style.display = 'flex';
-        state = 'main';
-        };
+            cell.onclick = () => {
+                viewer.applyColor(viewer.scene, ral, colorList); // 🔑 apply the color
+                overlay.style.background = hex;
+                overlay.textContent = ral;
+                grid.style.display = 'none';
+                overlay.style.display = 'flex';
+                state = 'main';
+            };
 
-        grid.appendChild(cell);
-    });
+            grid.appendChild(cell);
+        });
 
-    state = 'colors';
+        state = 'colors';
     }
 
     // Collapse grid when clicking canvas
     renderer.domElement.addEventListener('click', () => {
-    if (grid.style.display === 'grid') {
-        grid.style.display = 'none';
-        overlay.style.display = 'flex';
-        state = 'main';
-    }
+        if (grid.style.display === 'grid') {
+            grid.style.display = 'none';
+            overlay.style.display = 'flex';
+            state = 'main';
+        }
     });
 
     // Return a viewer object with everything you need
-    return {
-    scene,
-    renderer,
-    camera,
-    controls,
-    params: options,
-    applyColor
+    viewer = {
+        scene,
+        renderer,
+        camera,
+        controls,
+        params: options,
+        applyColor
     };
+
+    return viewer;
 }
