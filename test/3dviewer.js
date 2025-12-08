@@ -10,6 +10,8 @@ export function createMagento3DViewer(options = {})
         topColorHex = 0x4A5A6A,     // medium grayish blue
         bottomColorHex = 0x7B8D9A,  // lighter gray‑blue
         modelPosition = new THREE.Vector3(-0.25,-1.0,0.0),
+        previewPortraitPng = "",
+        previewLandscapePng = "",
         baseMaterinalName = "",
         defaultColor = "RAL 9001",
         colorList = {
@@ -18,12 +20,6 @@ export function createMagento3DViewer(options = {})
                 {"RAL 9001": "#FDF4E3"},{"RAL 9002": "#E7EBDA"}
             ],
             "Color": "#FFFFFF"
-            },
-            "Blacks": {
-            "List": [
-                {"RAL 9022": "#9C9C9C"},{"RAL 9023": "#828282"}
-            ],
-            "Color": "#282828"
             }
         },
         modelScale = 1.15,
@@ -61,6 +57,8 @@ export function createMagento3DViewer(options = {})
     }
 
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.NoToneMapping;
     document.body.appendChild(renderer.domElement);
 
     // Scene
@@ -90,14 +88,6 @@ export function createMagento3DViewer(options = {})
         }
     });
 
-    // Lighting
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-    scene.add(hemiLight);
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    dirLight.position.set(3, 5, 2);
-    scene.add(dirLight);
-
     // --- Auto orbit parameters ---
     const cycleDuration = 30000; // 30s per full revolution
     const idleDelay = 60000;     // 1 min idle before auto orbit resumes
@@ -111,41 +101,58 @@ export function createMagento3DViewer(options = {})
 
     // --- Interaction listener ---
     ["mousedown","touchstart","wheel"].forEach(evt => {
-    renderer.domElement.addEventListener(evt, () => {
-        autoOrbit = false;
-        controls.enabled = true;
-        lastInteraction = performance.now();
-    });
+        renderer.domElement.addEventListener(evt, () => {
+            autoOrbit = false;
+            controls.enabled = true;
+            lastInteraction = performance.now();
+        });
     });
 
-    // Gradient Sky Sphere
-    const geometry = new THREE.SphereGeometry(100, 32, 32);
-    const material = new THREE.ShaderMaterial({
-        uniforms: {
-            topColor:   { value: new THREE.Color(topColorHex) },
-            bottomColor:{ value: new THREE.Color(bottomColorHex) }
-        },
-        vertexShader: `
-            varying vec3 vPos;
-            void main() {
-            vPos = position;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-            }
-        `,
-        fragmentShader: `
-            varying vec3 vPos;
-            uniform vec3 topColor;
-            uniform vec3 bottomColor;
-            void main() {
-            float mixRatio = (vPos.y + 50.0) / 100.0; // adjust for sphere size
-            gl_FragColor = vec4(mix(bottomColor, topColor, mixRatio), 1.0);
-            }
-        `,
-        side: THREE.BackSide
-    });
-    
-    const sky = new THREE.Mesh(geometry, material);
-    scene.add(sky);
+    // --- Preview Plane ---
+    let previewMesh = null;
+    let previewCamera = null;
+
+    function addPreviewTexture() {
+        const aspect = window.innerWidth / window.innerHeight;
+        const previewUrl = aspect > 1 ? previewLandscapePng : previewPortraitPng;
+        if (!previewUrl) return;
+
+        const texLoader = new THREE.TextureLoader();
+        const texture = texLoader.load(previewUrl);
+        texture.colorSpace = THREE.SRGBColorSpace;
+
+        const distance = 1; // plane distance from camera
+        const vFov = THREE.MathUtils.degToRad(camera.fov);
+        const height = 2 * Math.tan(vFov / 2) * distance;
+        const width = height * aspect;
+
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const material = new THREE.MeshBasicMaterial(
+            { map: texture, toneMapped: false } );
+        previewMesh = new THREE.Mesh(geometry, material);
+        previewMesh.position.set(0, 0, -distance);
+
+        previewCamera = camera;
+        camera.add(previewMesh);
+        scene.add(camera);
+    }
+
+    // Remove preview
+    function removePreviewTexture() {
+        if (previewMesh) {
+            camera.remove(previewMesh);
+            previewMesh.geometry.dispose();
+            previewMesh.material.map.dispose();
+            previewMesh.material.dispose();
+            previewMesh = null;
+        }
+        if (previewCamera) {
+            scene.remove(previewCamera);
+            previewCamera = null;
+        }
+    }
+
+    addPreviewTexture();
 
     // Loader
     const loader = new GLTFLoader();
@@ -159,6 +166,8 @@ export function createMagento3DViewer(options = {})
     let mixer; // AnimationMixer
 
     loader.load(modelUrl, (gltf) => {
+        removePreviewTexture();
+
         const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
@@ -166,6 +175,60 @@ export function createMagento3DViewer(options = {})
         model.position.set( modelPosition.x, modelPosition.y, modelPosition.z );
         model.scale.set( modelScale, modelScale, modelScale );
         scene.add(model);
+
+        // Gradient Sky Sphere
+        const geometry = new THREE.SphereGeometry(100, 32, 32);
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                topColor:   { value: new THREE.Color(topColorHex) },
+                bottomColor:{ value: new THREE.Color(bottomColorHex) }
+            },
+            vertexShader: `
+                varying vec3 vPos;
+                void main() {
+                vPos = position;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vPos;
+                uniform vec3 topColor;
+                uniform vec3 bottomColor;
+                void main() {
+                float mixRatio = (vPos.y + 50.0) / 100.0; // adjust for sphere size
+                gl_FragColor = vec4(mix(bottomColor, topColor, mixRatio), 1.0);
+                }
+            `,
+            side: THREE.BackSide
+        });
+
+        // Lighting
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(3, 5, 2);
+        scene.add(dirLight);
+        
+        const sky = new THREE.Mesh(geometry, material);
+        scene.add(sky);
+
+        // PMREM generator
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        const texture_loader = new THREE.TextureLoader().load(
+            options.envPngUrl, // path to your PNG
+            (texture) => {
+                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                scene.environment = envMap;
+                scene.background = envMap; // optional: show PNG as background
+                texture.dispose();
+                pmremGenerator.dispose();
+            },
+            undefined,
+            (err) => console.warn('PNG env failed:', err)
+        );
 
         // Create mixer for the whole scene
         mixer = new THREE.AnimationMixer(model);
@@ -202,23 +265,6 @@ export function createMagento3DViewer(options = {})
 
         controls.update();
     });
-
-    // PMREM generator
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    pmremGenerator.compileEquirectangularShader();
-
-    const texture_loader = new THREE.TextureLoader().load(
-        options.envPngUrl, // path to your PNG
-        (texture) => {
-            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-            scene.environment = envMap;
-            scene.background = envMap; // optional: show PNG as background
-            texture.dispose();
-            pmremGenerator.dispose();
-        },
-        undefined,
-        (err) => console.warn('PNG env failed:', err)
-    );
 
     const clock = new THREE.Clock();
 
