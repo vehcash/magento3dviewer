@@ -39,22 +39,13 @@ export function createMagento3DViewer(options = {})
     let renderer;
     let viewer;
 
-    if (isSafariIOS())
-    {
-        // Safari/iOS: conservative settings
-        renderer = new THREE.WebGLRenderer({
-            antialias: false,
-            alpha: true,
-            powerPreference: 'low-power'
-        });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    } 
-    else 
-    {
-        // Default (desktop/other browsers)
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
-    }
+    // conservative settings
+    renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        alpha: true,
+        powerPreference: 'low-power'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
