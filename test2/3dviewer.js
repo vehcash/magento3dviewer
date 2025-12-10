@@ -201,6 +201,13 @@ export function createMagento3DViewer(options = {})
             `,
             side: THREE.BackSide
         });
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(3, 5, 2);
+        scene.add(dirLight);
         
         const sky = new THREE.Mesh(geometry, material);
         scene.add(sky);
@@ -209,12 +216,27 @@ export function createMagento3DViewer(options = {})
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
         pmremGenerator.compileEquirectangularShader();
 
+        function removeAllLights(scene)
+        {
+            const lights = [];
+            scene.traverse(obj => {
+                if (obj.isLight) {
+                lights.push(obj);
+                }
+            });
+            lights.forEach(light => {
+                scene.remove(light);
+                if (light.dispose) light.dispose(); // clean up resources if supported
+            });
+        }
+
         const texture_loader = new THREE.TextureLoader().load(
             options.envPngUrl, // path to your PNG
             (texture) => {
                 const envMap = pmremGenerator.fromEquirectangular(texture).texture;
                 scene.environment = envMap;
                 scene.background = envMap; // optional: show PNG as background
+                removeAllLights( scene );
                 texture.dispose();
                 pmremGenerator.dispose();
             },
