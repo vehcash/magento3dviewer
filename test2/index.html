@@ -10,8 +10,8 @@
     #colorSelectorOverlay
     {
       position: absolute;
-      top: max(2.5vh,2.5vw); right: max(2.5vh,2.5vw);
-      width: max(7vh,7vw); height: max(7vh,7vw);
+      top: min(2.5vh,2.5vw); right: min(2.5vh,2.5vw);
+      width: min(7vh,7vw); height: min(7vh,7vw);
       color: black; /* base color */
       background-color: white;
       display: flex; align-items: center; justify-content: center;
@@ -19,27 +19,27 @@
       cursor: pointer;
       font-family: sans-serif;
       border-radius: 50%;
-      font-size: max(1.5vh,1.5vw);
+      font-size: min(1.5vh,1.5vw);
     }
 
     #colorGrid
     {
       font-family: sans-serif;
       position: absolute;
-      top: max(2.5vh,2.5vw); right: max(2.5vh,2.5vw);
+      top: min(2.5vh,2.5vw); right: min(2.5vh,2.5vw);
       border-radius: 50%;
       display: none;
-      font-size: max(1.5vh,1.5vw);
+      font-size: min(1.5vh,1.5vw);
     }
 
     .colorSquare
     {
       font-family: sans-serif;
-      width: max(7vh,7vw); height: max(7vh,7vw);
+      width: min(7vh,7vw); height: min(7vh,7vw);
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       border-radius: 50%;
-      font-size: max(1.5vh,1.5vw);
+      font-size: min(1.5vh,1.5vw);
     }
   </style>
 </head>
