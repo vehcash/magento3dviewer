@@ -373,7 +373,7 @@ export function createMagento3DViewer(options = {})
             const groups = Object.keys(colorList);
             const count = groups.length;
             const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
-            grid.style.gridTemplateColumns = `repeat(${cols}, min(7vh,7vw))`;
+            grid.style.gridTemplateColumns = `repeat(${cols}, min(9vh,9vw))`;
 
             grid.innerHTML = '';
             groups.forEach(group => {
@@ -400,7 +400,7 @@ export function createMagento3DViewer(options = {})
         const colors = colorList[group].List;
         const count = colors.length;
         const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
-        grid.style.gridTemplateColumns = `repeat(${cols}, min(7vh,7vw))`;
+        grid.style.gridTemplateColumns = `repeat(${cols}, min(9vh,9vw))`;
 
         colors.forEach(entry => {
             const ral = Object.keys(entry)[0];

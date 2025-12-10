@@ -11,7 +11,7 @@
     {
       position: absolute;
       top: min(2.5vh,2.5vw); right: min(2.5vh,2.5vw);
-      width: min(7vh,7vw); height: min(7vh,7vw);
+      width: min(9vh,9vw); height: min(9vh,9vw);
       color: black; /* base color */
       background-color: white;
       display: flex; align-items: center; justify-content: center;
@@ -19,7 +19,7 @@
       cursor: pointer;
       font-family: sans-serif;
       border-radius: 50%;
-      font-size: min(1.5vh,1.5vw);
+      font-size: min(2vh,2vw);
     }
 
     #colorGrid
@@ -29,17 +29,17 @@
       top: min(2.5vh,2.5vw); right: min(2.5vh,2.5vw);
       border-radius: 50%;
       display: none;
-      font-size: min(1.5vh,1.5vw);
+      font-size: min(2vh,2vw);
     }
 
     .colorSquare
     {
       font-family: sans-serif;
-      width: min(7vh,7vw); height: min(7vh,7vw);
+      width: min(9vh,9vw); height: min(9vh,9vw);
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       border-radius: 50%;
-      font-size: min(1.5vh,1.5vw);
+      font-size: min(2vh,2vw);
     }
   </style>
 </head>
@@ -66,6 +66,8 @@
       previewLandscapePng: "./test_incineradoras/preview_landscape.png",
       baseMaterinalName: "METAL_FINAL",
       defaultColor: "RAL 6016",
+      topColorHex: 0xdbdbdb,
+      bottomColorHex: 0xffffff,
       colorList: {
         "Amarillos": {
           "List": [
