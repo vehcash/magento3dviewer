@@ -297,12 +297,14 @@ export function createMagento3DViewer(options = {})
 
     animate();
 
-    // Resize
-    window.addEventListener('resize', () => {
+    function onWindowResize() {
+        renderer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    }
+
+    window.addEventListener('resize', onWindowResize);
+    window.addEventListener('orientationchange', onWindowResize);
 
     function applyColor(scene, ralCode, colorList)
     {
