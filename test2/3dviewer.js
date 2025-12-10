@@ -201,14 +201,6 @@ export function createMagento3DViewer(options = {})
             `,
             side: THREE.BackSide
         });
-
-        // Lighting
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-        scene.add(hemiLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLight.position.set(3, 5, 2);
-        scene.add(dirLight);
         
         const sky = new THREE.Mesh(geometry, material);
         scene.add(sky);
