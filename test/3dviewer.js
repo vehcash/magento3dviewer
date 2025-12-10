@@ -365,7 +365,7 @@ export function createMagento3DViewer(options = {})
             const groups = Object.keys(colorList);
             const count = groups.length;
             const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
-            grid.style.gridTemplateColumns = `repeat(${cols}, min(9vh,9vw))`;
+            grid.style.gridTemplateColumns = `repeat(${cols}, min(12vh,12vw))`;
 
             grid.innerHTML = '';
             groups.forEach(group => {
@@ -392,7 +392,7 @@ export function createMagento3DViewer(options = {})
         const colors = colorList[group].List;
         const count = colors.length;
         const cols = Math.min(5, Math.ceil(Math.sqrt(count)));
-        grid.style.gridTemplateColumns = `repeat(${cols}, min(9vh,9vw))`;
+        grid.style.gridTemplateColumns = `repeat(${cols}, min(12vh,12vw))`;
 
         colors.forEach(entry => {
             const ral = Object.keys(entry)[0];
@@ -407,6 +407,7 @@ export function createMagento3DViewer(options = {})
             cell.onclick = () => {
                 viewer.applyColor(viewer.scene, ral, colorList); // 🔑 apply the color
                 overlay.style.background = hex;
+                overlay.style.color = getReadableTextColor(hex);
                 overlay.textContent = ral;
                 grid.style.display = 'none';
                 overlay.style.display = 'flex';
