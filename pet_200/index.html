@@ -12,9 +12,9 @@
       position: absolute;
       top: min(2.5vh,2.5vw); right: min(2.5vh,2.5vw);
       width: min(12vh,12vw); height: min(12vh,12vw);
-      text-align: center;
       color: black; /* base color */
       background-color: white;
+      text-align: center;
       display: flex; align-items: center; justify-content: center;
       pointer-events: auto;
       cursor: pointer;
@@ -44,11 +44,33 @@
       border-radius: 50%;
       font-size: min(3vh,3vw);
     }
+
+  #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      
+      padding: 6vw 4vh;
+      border-radius: 10vw;
+
+      background: rgba(0, 0, 0, 0.6); /* transparent dark */
+      backdrop-filter: blur(4px);     /* optional: nice glass effect */
+
+      color: white;
+      font-size: 4em;
+      font-weight: 500;
+      text-align: center;
+
+      z-index: 9999;
+      pointer-events: none; /* so it doesn't block interactions */
+  }
   </style>
 </head>
 <body>
   <div id="colorSelectorOverlay">Color</div>
   <div id="colorGrid"></div>
+  <div id="loading">0%</div>
 
 <script async src="https://ga.jspm.io/npm:es-module-shims@1.5.17/dist/es-module-shims.js"></script>
 <script type="importmap">
@@ -63,11 +85,11 @@
 <script type="module">
     import { createMagento3DViewer } from "./3dviewer.js";
     var viewer = createMagento3DViewer({
-      modelUrl: './test_incineradoras/SB-AB.glb',
+      modelUrl: './test_incineradoras/PET-200.glb',
       envPngUrl: './test_incineradoras/enviroment_2.png',
       previewPortraitPng: "./test_incineradoras/preview_portrait.png",
       previewLandscapePng: "./test_incineradoras/preview_landscape.png",
-      baseMaterinalName: "hammer_paint_03.004",
+      baseMaterinalName: "METAL_FINAL",
       defaultColor: "RAL 6016",
       topColorHex: 0xdbdbdb,
       bottomColorHex: 0xffffff,

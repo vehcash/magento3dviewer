@@ -203,6 +203,8 @@ export function createMagento3DViewer(options = {})
         const sky = new THREE.Mesh(geometry, material);
         scene.add(sky);
 
+        document.getElementById('loading').style.display = 'none';
+
         // PMREM generator
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
         pmremGenerator.compileEquirectangularShader();
@@ -269,6 +271,14 @@ export function createMagento3DViewer(options = {})
         }
 
         controls.update();
+    },
+    // ✅ ON PROGRESS
+    (xhr) => {
+        if (xhr.lengthComputable)
+        {
+            const percent = Math.round((xhr.loaded / xhr.total) * 100);
+            document.getElementById('loading').innerText = `${percent}%`;
+        }
     });
 
     const clock = new THREE.Clock();
