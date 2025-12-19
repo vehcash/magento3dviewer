@@ -359,6 +359,20 @@ export function createMagento3DViewer(options = {})
         });
     }
 
+    const btn = document.getElementById("fullscreen-icon");
+
+    btn.addEventListener("click", () => {
+        if (!document.fullscreenElement) {
+            // Enter fullscreen
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error("Error attempting fullscreen:", err);
+            });
+        } else {
+            // Exit fullscreen
+            document.exitFullscreen();
+        }
+    });
+
     function getReadableTextColor(hex) {
         // Remove '#' if present
         hex = hex.replace('#', '');

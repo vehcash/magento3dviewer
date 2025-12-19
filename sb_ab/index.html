@@ -20,7 +20,7 @@
       cursor: pointer;
       font-family: sans-serif;
       border-radius: 50%;
-      font-size: min(3vh,3vw);
+      font-size: min(2.4vh,2.4vw);
     }
 
     #colorGrid
@@ -31,7 +31,7 @@
       top: min(2.5vh,2.5vw); right: min(2.5vh,2.5vw);
       border-radius: 50%;
       display: none;
-      font-size: min(3vh,3vw);
+      font-size: min(2.4vh,2.4vw);
     }
 
     .colorSquare
@@ -42,7 +42,7 @@
       text-align: center;
       display: flex; align-items: center; justify-content: center;
       border-radius: 50%;
-      font-size: min(3vh,3vw);
+      font-size: min(2.4vh,2.4vw);
     }
 
     #loading {
@@ -52,7 +52,7 @@
         transform: translate(-50%, -50%);
         
         padding: 6vw 4vh;
-        border-radius: 10vw;
+        border-radius: min(10vw,10vh);
 
         background: rgba(0, 0, 0, 0.6); /* transparent dark */
         backdrop-filter: blur(4px);     /* optional: nice glass effect */
@@ -65,10 +65,27 @@
         z-index: 9999;
         pointer-events: none; /* so it doesn't block interactions */
     }
+
+    #fullscreen-icon {
+      bottom: min(2.5vh,2.5vw); right: min(2.5vh,2.5vw);
+      position: absolute !important;
+
+      background-image: url("fullscreen.png");
+      background-size: cover;      /* or contain */
+      background-position: center;
+      background-repeat: no-repeat;
+      width: min( 100px, 10vw );
+      height: min( 100px, 10vw );
+      position: relative;
+      box-sizing: border-box;
+      cursor: pointer;
+
+    }
   </style>
 </head>
 <body>
   <div id="colorSelectorOverlay">Color</div>
+  <div id="fullscreen-icon"></div>
   <div id="colorGrid"></div>
   <div id="loading">0%</div>
 
