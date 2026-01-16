@@ -230,6 +230,9 @@ export function createMagento3DViewer(options = {})
                 scene.environment = envMap;
                 scene.background = envMap; // optional: show PNG as background
                 removeAllLights( scene );
+                // Add a subtle ambient light after removing all lights
+                const ambient = new THREE.AmbientLight(0xffffff, 0.2); 
+                scene.add(ambient);
                 texture.dispose();
                 pmremGenerator.dispose();
             },

@@ -230,6 +230,9 @@ export function createMagento3DViewer(options = {})
                 scene.environment = envMap;
                 scene.background = envMap; // optional: show PNG as background
                 removeAllLights( scene );
+                // Add a subtle ambient light after removing all lights
+                const ambient = new THREE.AmbientLight(0xffffff, 0.2); 
+                scene.add(ambient);
                 texture.dispose();
                 pmremGenerator.dispose();
             },
@@ -321,21 +324,40 @@ export function createMagento3DViewer(options = {})
     animate();
 
     let resizeTimeout;
+    let lastW = 0;
+    let lastH = 0;
 
     function onWindowResize() {
+
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            document.body.style.display = "none";
-            document.body.offsetHeight; // force reflow
-            document.body.style.display = "";
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        }, 200);
+        resizeTimeout = setTimeout(checkViewportStable, 50);
     }
 
-    window.addEventListener('resize', onWindowResize);
-    window.addEventListener('orientationchange', onWindowResize);
+    function checkViewportStable() {
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        // If values are still changing, wait again
+        if (w !== lastW || h !== lastH) {
+            lastW = w;
+            lastH = h;
+            resizeTimeout = setTimeout(checkViewportStable, 50);
+            return;
+        }
+
+        document.body.style.display = "none";
+        document.body.offsetHeight; // force reflow
+        document.body.style.display = "";
+
+        // Now the viewport is stable → resize safely
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+    }
+
+    window.addEventListener("resize", onWindowResize);
+    window.addEventListener("orientationchange", onWindowResize);
 
     function applyColor(scene, ralCode, colorList)
     {
