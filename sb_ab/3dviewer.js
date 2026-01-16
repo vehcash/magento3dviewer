@@ -362,14 +362,37 @@ export function createMagento3DViewer(options = {})
     const btn = document.getElementById("fullscreen-icon");
 
     btn.addEventListener("click", () => {
-        if (!document.fullscreenElement) {
+        const doc = document;
+        const docEl = document.documentElement;
+
+        const isFullScreen =
+            doc.fullscreenElement ||
+            doc.webkitFullscreenElement ||
+            doc.mozFullScreenElement ||
+            doc.msFullscreenElement;
+
+        if (!isFullScreen) {
             // Enter fullscreen
-            document.documentElement.requestFullscreen().catch(err => {
-                console.error("Error attempting fullscreen:", err);
-            });
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen();
+            } else if (docEl.webkitRequestFullscreen) { // Safari
+                docEl.webkitRequestFullscreen();
+            } else if (docEl.mozRequestFullScreen) { // Old Firefox
+                docEl.mozRequestFullScreen();
+            } else if (docEl.msRequestFullscreen) { // IE/Edge legacy
+                docEl.msRequestFullscreen();
+            }
         } else {
             // Exit fullscreen
-            document.exitFullscreen();
+            if (doc.exitFullscreen) {
+                doc.exitFullscreen();
+            } else if (doc.webkitExitFullscreen) { // Safari
+                doc.webkitExitFullscreen();
+            } else if (doc.mozCancelFullScreen) {
+                doc.mozCancelFullScreen();
+            } else if (doc.msExitFullscreen) {
+                doc.msExitFullscreen();
+            }
         }
     });
 
