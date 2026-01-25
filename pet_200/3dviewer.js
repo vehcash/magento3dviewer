@@ -155,134 +155,146 @@ export function createMagento3DViewer(options = {})
     loader.setDRACOLoader(dracoLoader);
 
     let mixer; // AnimationMixer
+	
+	// Utility: Promisify TextureLoader
+	function loadTextureWithProgress(url, onProgress) {
+		return new Promise((resolve, reject) => {
+			new THREE.TextureLoader().load(
+				url,
+				tex => resolve(tex),
+				xhr => {
+					if (xhr.lengthComputable) {
+						onProgress(xhr.loaded, xhr.total);
+					}
+				},
+				err => reject(err)
+			);
+		});
+	}
 
-    loader.load(modelUrl, (gltf) => {
-        removePreviewTexture();
+	// Utility: Promisify GLTFLoader
+	function loadGLTFWithProgress(url, onProgress) {
+		return new Promise((resolve, reject) => {
+			loader.load(
+				url,
+				gltf => resolve(gltf),
+				xhr => {
+					if (xhr.lengthComputable) {
+						onProgress(xhr.loaded, xhr.total);
+					}
+				},
+				err => reject(err)
+			);
+		});
+	}
 
-        const model = gltf.scene;
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        model.position.set( modelPosition.x, modelPosition.y, modelPosition.z );
-        model.scale.set( modelScale, modelScale, modelScale );
-        scene.add(model);
+	// Track progress
+	let envLoaded = 0, envTotal = 1;
+	let modelLoaded = 0, modelTotal = 1;
 
-        // Gradient Sky Sphere
-        const geometry = new THREE.SphereGeometry(100, 32, 32);
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                topColor:   { value: new THREE.Color(topColorHex) },
-                bottomColor:{ value: new THREE.Color(bottomColorHex) }
-            },
-            vertexShader: `
-                varying vec3 vPos;
-                void main() {
-                vPos = position;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-                }
-            `,
-            fragmentShader: `
-                varying vec3 vPos;
-                uniform vec3 topColor;
-                uniform vec3 bottomColor;
-                void main() {
-                float mixRatio = (vPos.y + 50.0) / 100.0; // adjust for sphere size
-                gl_FragColor = vec4(mix(bottomColor, topColor, mixRatio), 1.0);
-                }
-            `,
-            side: THREE.BackSide
-        });
+	function updateCombinedProgress() {
+		const percent = Math.round(
+			((envLoaded / envTotal) + (modelLoaded / modelTotal)) / 2 * 100
+		);
+		document.getElementById("loading").innerText = `${percent}%`;
+	}
 
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-        scene.add(hemiLight);
+	// Start both loads in parallel
+	const envPromise = loadTextureWithProgress(options.envPngUrl, (loaded, total) => {
+		envLoaded = loaded;
+		envTotal = total;
+		updateCombinedProgress();
+	});
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLight.position.set(3, 5, 2);
-        scene.add(dirLight);
-        
-        const sky = new THREE.Mesh(geometry, material);
-        scene.add(sky);
+	const modelPromise = loadGLTFWithProgress(modelUrl, (loaded, total) => {
+		modelLoaded = loaded;
+		modelTotal = total;
+		updateCombinedProgress();
+	});
 
-        document.getElementById('loading').style.display = 'none';
+	// When both finish:
+	Promise.all([envPromise, modelPromise]).then(([texture, gltf]) => {
 
-        // PMREM generator
-        const pmremGenerator = new THREE.PMREMGenerator(renderer);
-        pmremGenerator.compileEquirectangularShader();
+		// Remove loading UI
+		document.getElementById("loading").style.display = "none";
 
-        function removeAllLights(scene)
-        {
-            const lights = [];
-            scene.traverse(obj => {
-                if (obj.isLight) {
-                lights.push(obj);
-                }
-            });
-            lights.forEach(light => {
-                scene.remove(light);
-                if (light.dispose) light.dispose(); // clean up resources if supported
-            });
-        }
+		// --- ENVIRONMENT SETUP ---
+		const pmremGenerator = new THREE.PMREMGenerator(renderer);
+		pmremGenerator.compileEquirectangularShader();
 
-        const texture_loader = new THREE.TextureLoader().load(
-            options.envPngUrl, // path to your PNG
-            (texture) => {
-                const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-                scene.environment = envMap;
-                scene.background = envMap; // optional: show PNG as background
-                removeAllLights( scene );
-                // Add a subtle ambient light after removing all lights
-                const ambient = new THREE.AmbientLight(0xffffff, 0.2); 
-                scene.add(ambient);
-                texture.dispose();
-                pmremGenerator.dispose();
-            },
-            undefined,
-            (err) => console.warn('PNG env failed:', err)
-        );
+		const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+		scene.environment = envMap;
+		scene.background = envMap;
 
-        // Create mixer for the whole scene
-        mixer = new THREE.AnimationMixer(model);
+		const ambient = new THREE.AmbientLight(0xffffff, 0.2);
+		scene.add(ambient);
 
-        // Play the first animation clip (global one)
-        const clip = gltf.animations[0];
-        if (clip) {
-            const action = mixer.clipAction(clip);
-            action.play();
-        }
+		texture.dispose();
+		pmremGenerator.dispose();
 
-        // 👇 Apply default color immediately after model is added
-        if (defaultColor) {
-            applyColor(model, defaultColor, colorList);
+		// --- MODEL SETUP ---
+		removePreviewTexture();
 
-            // 🔑 Update overlay div with the default color and name
-            const overlay = document.getElementById("colorSelectorOverlay");
-            if (overlay) {
-                // Find hex value from colorList
-                let hexValue = null;
-                for (const group in colorList) {
-                    colorList[group].List.forEach(entry => {
-                    if (entry[defaultColor]) {
-                        hexValue = entry[defaultColor];
-                    }
-                    });
-                }
-                if (hexValue) {
-                    overlay.style.background = hexValue;
-                    overlay.textContent = defaultColor;
-                }
-            }
-        }
+		const model = gltf.scene;
+		model.position.set(modelPosition.x, modelPosition.y, modelPosition.z);
+		model.scale.set(modelScale, modelScale, modelScale);
+		scene.add(model);
 
-        controls.update();
-    },
-    // ✅ ON PROGRESS
-    (xhr) => {
-        if (xhr.lengthComputable)
-        {
-            const percent = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('loading').innerText = `${percent}%`;
-        }
-    });
+		// Gradient sky sphere
+		const geometry = new THREE.SphereGeometry(100, 32, 32);
+		const material = new THREE.ShaderMaterial({
+			uniforms: {
+				topColor: { value: new THREE.Color(topColorHex) },
+				bottomColor: { value: new THREE.Color(bottomColorHex) }
+			},
+			vertexShader: `
+				varying vec3 vPos;
+				void main() {
+					vPos = position;
+					gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+				}
+			`,
+			fragmentShader: `
+				varying vec3 vPos;
+				uniform vec3 topColor;
+				uniform vec3 bottomColor;
+				void main() {
+					float mixRatio = (vPos.y + 50.0) / 100.0;
+					gl_FragColor = vec4(mix(bottomColor, topColor, mixRatio), 1.0);
+				}
+			`,
+			side: THREE.BackSide
+		});
+
+		const sky = new THREE.Mesh(geometry, material);
+		scene.add(sky);
+
+		// Animation
+		mixer = new THREE.AnimationMixer(model);
+		const clip = gltf.animations[0];
+		if (clip) mixer.clipAction(clip).play();
+
+		// Default color
+		if (defaultColor) {
+			applyColor(model, defaultColor, colorList);
+
+			const overlay = document.getElementById("colorSelectorOverlay");
+			if (overlay) {
+				let hexValue = null;
+				for (const group in colorList) {
+					colorList[group].List.forEach(entry => {
+						if (entry[defaultColor]) hexValue = entry[defaultColor];
+					});
+				}
+				if (hexValue) {
+					overlay.style.background = hexValue;
+					overlay.textContent = defaultColor;
+				}
+			}
+		}
+
+		controls.update();
+	});
 
     const clock = new THREE.Clock();
 
@@ -324,40 +336,21 @@ export function createMagento3DViewer(options = {})
     animate();
 
     let resizeTimeout;
-    let lastW = 0;
-    let lastH = 0;
 
     function onWindowResize() {
-
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(checkViewportStable, 50);
+        resizeTimeout = setTimeout(() => {
+            document.body.style.display = "none";
+            document.body.offsetHeight; // force reflow
+            document.body.style.display = "";
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        }, 200);
     }
 
-    function checkViewportStable() {
-
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-
-        // If values are still changing, wait again
-        if (w !== lastW || h !== lastH) {
-            lastW = w;
-            lastH = h;
-            resizeTimeout = setTimeout(checkViewportStable, 50);
-            return;
-        }
-
-        document.body.style.display = "none";
-        document.body.offsetHeight; // force reflow
-        document.body.style.display = "";
-
-        // Now the viewport is stable → resize safely
-        renderer.setSize(w, h);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-    }
-
-    window.addEventListener("resize", onWindowResize);
-    window.addEventListener("orientationchange", onWindowResize);
+    window.addEventListener('resize', onWindowResize);
+    window.addEventListener('orientationchange', onWindowResize);
 
     function applyColor(scene, ralCode, colorList)
     {
