@@ -383,6 +383,8 @@ export function createMagento3DViewer(options = {})
     }
 
     const btn = document.getElementById("fullscreen-icon");
+    if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
+        btn.style.display = "none";
 
     btn.addEventListener("click", () => {
         const doc = document;
